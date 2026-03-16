@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}{{ m.title.english or m.title.romaji }} — AniDB{% endblock %}
+{% block content %}
+
+<!-- 배너 -->
+{% if m.bannerImage %}
+<div style="height:320px;background:url('{{ m.bannerImage }}') center/cover;position:relative;">
+  <div style="position:absolute;inset:0;background:linear-gradient(0deg,var(--bg) 0%,transparent 60%);"></div>
+</div>
+{% endif %}
+
+<main style="margin-top: {% if m.bannerImage %}-80px{% else %}0{% endif %}; position:relative;">
+<div style="display:grid;grid-template-columns:240px 1fr;gap:40px;align-items:start;">
+
+  <!-- 포스터 -->
+  <div>
+    <img src="{{ m.coverImage.extraLarge }}" style="width:100%;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+    <!-- 점수 -->
+    {% if m.averageScore %}
+    <div style="
+      margin-top:16px;background:var(--surface);border-radius:var(--radius);
+      padding:16px;text-align:center;
+    ">
+      <div style="font-size:2.8rem;font-weight:900;color:#ffd700;">
+        {{ "%.1f"|format(m.averageScore / 10) }}
+      </div>
+      <div style="font-size:0.78rem;color:var(--muted);">평균 점수 / 10</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:4px;">
+        👥 {{ "{:,}".format(m.popularity) }} 유저
+      </div>
+    </div>
+    {% endif %}
+    <!-- 트레일러 -->
+    {% if m.trailer and m.trailer.site == "YouTube" %}
+    <a href="https://youtube.com/watch?v={{ m.trailer.id }}" target="_blank" style="
+      display:block;margin-top:12px;background:linear-gradient(135deg,#ff0000,#cc0000);
+      color:#fff;text-align:center;padding:10px;border-radius:var(--radius);
+      text-decoration:none;font-weight:700;font-size:0.88rem;
+    ">▶ 트레일러 보기</a>
+    {% endif %}
+  </div>
+
+  <!-- 정보 -->
+  <div>
+    <div style="font-size:0.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">
+      {{ m.season }} {{ m.seasonYear }}
+    </div>
+    <h1 style="font-size:2.2rem;font-weight:900;line-height:1.2;margin-bottom:6px;">
+      {{ m.title.english or m.title.romaji }}
+    </h1>
+    <div style="font-size:0.9rem;color:var(--muted);margin-bottom:16px;">
+      {{ m.title.romaji }}
+      {% if m.title.native %}· {{ m.title.native }}{% endif %}
+    </div>
+
+    <!-- 메타 배지들 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+      {% for g in m.genres %}
+        <span class="badge badge-genre">{{ g }}</span>
+      {% endfor %}
+      <span class="badge badge-status-{{ m.status }}">{{ m.status }}</span>
+      {% if m.episodes %}<span class="badge" style="background:rgba(0,229,255,0.1);color:var(--cyan);">{{ m.episodes }}화</span>{% endif %}
+      {% if m.duration %}<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);">{{ m.duration }}분/화</span>{% endif %}
+    </div>
+
+    <!-- 설명 -->
+    {% if m.description %}
+    <p style="font-size:0.9rem;line-height:1.8;color:#c0c8e8;margin-bottom:28px;max-width:680px;">
+      {{ m.description | replace('<br>', ' ') | striptags | truncate(400) }}
+    </p>
+    {% endif %}
+
+    <!-- 스튜디오 -->
+    {% if m.studios.nodes %}
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">스튜디오</div>
+      <div style="font-weight:700;color:var(--accent2);">{{ m.studios.nodes[0].name }}</div>
+    </div>
+    {% endif %}
+
+    <!-- 스태프 -->
+    {% if m.staff.edges %}
+    <div style="margin-bottom:28px;">
+      <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">스태프</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        {% for s in m.staff.edges %}
+        <div style="background:var(--surface);padding:6px 12px;border-radius:99px;font-size:0.8rem;">
+          <span style="color:var(--muted);">{{ s.role }}</span> · {{ s.node.name.full }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 등장인물 -->
+    {% if m.characters.edges %}
+    <div>
+      <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">등장인물</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px;">
+        {% for c in m.characters.edges %}
+        <div style="text-align:center;">
+          <img src="{{ c.node.image.medium }}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--surface2);">
+          <div style="font-size:0.75rem;margin-top:6px;line-height:1.3;">{{ c.node.name.full }}</div>
+          <div style="font-size:0.68rem;color:var(--accent);margin-top:2px;">{{ c.role }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- 관련작 -->
+{% set rel = m.relations.edges | selectattr("node.type", "equalto", "ANIME") | list %}
+{% if rel %}
+<section style="margin-top:48px;">
+  <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:16px;">🔗 관련작</h2>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;">
+    {% for r in rel[:6] %}
+    <a href="/anime/{{ r.node.id }}" style="text-decoration:none;color:var(--text);width:110px;">
+      <img src="{{ r.node.coverImage.medium }}" style="width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px;">
+      <div style="font-size:0.75rem;margin-top:6px;line-height:1.3;text-align:center;">
+        <div style="color:var(--accent);font-size:0.68rem;">{{ r.relationType }}</div>
+        {{ r.node.title.romaji | truncate(20) }}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+</main>
+{% endblock %}

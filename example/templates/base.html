@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>{% block title %}AniDB{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0f18;
+      --surface: #161924;
+      --surface2: #1e2235;
+      --accent: #e040fb;
+      --accent2: #7c4dff;
+      --cyan: #00e5ff;
+      --text: #eef0ff;
+      --muted: #8892b0;
+      --radius: 12px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; }
+
+    /* NAV */
+    nav {
+      background: rgba(13,15,24,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #2a2d4a;
+      padding: 0 32px;
+      height: 60px;
+      display: flex; align-items: center; gap: 28px;
+      position: sticky; top: 0; z-index: 300;
+    }
+    .logo {
+      font-size: 1.4rem; font-weight: 900; letter-spacing: -0.5px;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-decoration: none;
+    }
+    .nav-links a {
+      color: var(--muted); text-decoration: none;
+      font-size: 0.88rem; transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* 검색 */
+    .nav-search { margin-left: auto; position: relative; }
+    .nav-search input {
+      background: var(--surface2); border: 1px solid #2a2d4a;
+      color: var(--text); padding: 8px 40px 8px 14px;
+      border-radius: 99px; width: 240px; font-size: 0.88rem;
+      outline: none; transition: border-color .2s, width .3s;
+    }
+    .nav-search input:focus { border-color: var(--accent2); width: 300px; }
+    .nav-search .search-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem;
+    }
+
+    /* 자동완성 */
+    #ac-box {
+      display: none; position: absolute; top: calc(100% + 6px); right: 0;
+      width: 340px; background: var(--surface); border: 1px solid #2a2d4a;
+      border-radius: var(--radius); overflow: hidden; z-index: 400;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    }
+    .ac-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; text-decoration: none; color: var(--text);
+      transition: background .15s;
+    }
+    .ac-item:hover { background: var(--surface2); }
+    .ac-item img { width: 36px; height: 52px; object-fit: cover; border-radius: 4px; }
+    .ac-info .ac-title { font-size: 0.88rem; font-weight: 600; }
+    .ac-info .ac-meta { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+    .ac-score { margin-left: auto; font-size: 0.8rem; color: #ffd700; font-weight: 700; }
+
+    /* FLASH */
+    main { max-width: 1320px; margin: 0 auto; padding: 28px 24px; }
+
+    /* 배지 */
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: .5px;
+    }
+    .badge-genre { background: rgba(124,77,255,0.2); color: #b388ff; border: 1px solid #7c4dff44; }
+    .badge-score { background: rgba(255,215,0,0.15); color: #ffd700; border: 1px solid #ffd70040; }
+    .badge-status-RELEASING { background: rgba(0,229,255,0.12); color: var(--cyan); }
+    .badge-status-FINISHED  { background: rgba(100,100,100,0.2); color: #aaa; }
+    .badge-status-NOT_YET_RELEASED { background: rgba(224,64,251,0.15); color: var(--accent); }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="/">✦ AniDB</a>
+  <div class="nav-links">
+    <a href="/">홈</a>
+    <a href="/search">탐색</a>
+  </div>
+  <div class="nav-search">
+    <form action="/search" method="get" id="nav-form">
+      <input id="nav-q" name="q" placeholder="애니 검색..." autocomplete="off"/>
+      <button class="search-btn" type="submit">🔍</button>
+    </form>
+    <div id="ac-box"></div>
+  </div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<footer style="text-align:center;padding:32px;color:var(--muted);font-size:0.8rem;border-top:1px solid #1e2235;margin-top:60px;">
+  Data powered by <a href="https://anilist.co" style="color:var(--accent2)">AniList</a> · Built with Flask
+</footer>
+
+<script>
+  const input = document.getElementById("nav-q");
+  const box   = document.getElementById("ac-box");
+  let timer;
+
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) { box.style.display = "none"; return; }
+    timer = setTimeout(async () => {
+      const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!data.length) { box.style.display = "none"; return; }
+      box.innerHTML = data.map(a => `
+        <a class="ac-item" href="/anime/${a.id}">
+          <img src="${a.poster}" alt="">
+          <div class="ac-info">
+            <div class="ac-title">${a.title}</div>
+            <div class="ac-meta">${a.year ?? "?"}</div>
+          </div>
+          <div class="ac-score">⭐ ${a.score ?? "--"}</div>
+        </a>`).join("");
+      box.style.display = "block";
+    }, 300);
+  });
+
+  document.addEventListener("click", e => {
+    if (!box.contains(e.target) && e.target !== input)
+      box.style.display = "none";
+  });
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
