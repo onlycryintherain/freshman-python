@@ -1,7 +1,8 @@
 # freshman-python
 ## 노션 링크
 https://2026.whanci.xyz
-
+## Anidb
+https://db.whanci.xyz/
 
 ## 강의
 - 어제 배운거 복습([과제](https://github.com/onlycryintherain/freshman-python/blob/main/sc/kda.py))
